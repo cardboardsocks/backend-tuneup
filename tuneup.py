@@ -12,6 +12,7 @@ import pstats
 import functools
 import io
 import timeit
+from pstats import SortKey
 
 def profile(fnc):
     def inner(*args, **kwargs):
@@ -20,7 +21,7 @@ def profile(fnc):
         retval = fnc(*args, **kwargs)
         pr.disable()
         s = io.StringIO()
-        sortby = 'cumulative'
+        sortby = SortKey.CUMULATIVE
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
         ps.print_stats()
         print(s.getvalue())
@@ -40,20 +41,24 @@ def read_movies(src):
 def find_duplicate_movies(src):
     """Returns a list of duplicate movies from a src list."""
     movies = read_movies(src)
-    movies = [movie.lower() for movie in movies]
+    watched = {}
     duplicates = []
-    while movies:
-        movie = movies.pop()
-        if movie in movies:
-            duplicates.append(movie)
+    for movie in movies:
+        if movie not in seen:
+            watched[movie] = 1
+        else:
+            if watched[movie] == 1:
+                duplicates.append(movie)
+            watched[movie] += 1
     return duplicates
-
-
+    
 def timeit_helper():
     """Part A: Obtain some profiling measurements using timeit."""
-    t = timeit.Timer(stmt="main()", setup ="import tuneup")
-    res = t.repeat(repeat=3, number=3)
-    return res
+    t = timeit.Timer('main()')
+    r, n = 7, 3  # repeat, number constants
+    result = t.repeat(repeat=r, number=n)
+    min_of_averages = min(map(lambda x: x / n, result))
+    return f"Best time across {r} repeats of {n} runs per repeat: {min_of_averages} sec"
 
 
 def main():
@@ -61,7 +66,7 @@ def main():
     result = find_duplicate_movies('movies.txt')
     print(f'Found {len(result)} duplicate movies:')
     print('\n'.join(result))
-    timeit_helper()
+    print(timeit_helper())
 
 
 if __name__ == '__main__':
